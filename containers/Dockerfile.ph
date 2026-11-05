@@ -27,12 +27,16 @@ COPY vendor/ProtonPottsMPNN/foundry /opt/protonpotts/foundry
 COPY vendor/ProtonPottsMPNN/checkpoints /opt/protonpotts/checkpoints
 COPY vendor/ProtonPottsMPNN/inference/examples /opt/protonpotts/examples
 
+# Without these pins the venv takes whatever PyPI resolves that day. atomworks 3 began requiring a
+# charge annotation biotite attaches only on request, which broke this build on an unpinned solve.
+COPY containers/ph-constraints.txt /opt/protonpotts/constraints.txt
+
 # hatch-vcs derives the version from git, and there is no .git here.
 ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0 HATCH_VCS_PRETEND_VERSION=0.0.0
 RUN python3 -m venv /opt/protonpotts/venv \
  && /opt/protonpotts/venv/bin/pip install --no-cache-dir --upgrade pip \
- && /opt/protonpotts/venv/bin/pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch \
- && /opt/protonpotts/venv/bin/pip install --no-cache-dir /opt/protonpotts/foundry "propka>=3.5" ipdb "pandas>=2.1,<3" \
+ && /opt/protonpotts/venv/bin/pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "$(grep '^torch==' /opt/protonpotts/constraints.txt)" \
+ && /opt/protonpotts/venv/bin/pip install --no-cache-dir --constraint /opt/protonpotts/constraints.txt /opt/protonpotts/foundry "propka>=3.5" ipdb "pandas>=2.1,<3" \
  && ! /opt/protonpotts/venv/bin/python -c "import nvidia" 2>/dev/null \
  && /opt/protonpotts/venv/bin/python -c "import torch, biotite; assert '+cpu' in torch.__version__, torch.__version__; print('ph venv: torch', torch.__version__, 'biotite', biotite.__version__)"
 
