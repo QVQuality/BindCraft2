@@ -170,6 +170,20 @@ bindcraft design examples/pdl1.json --mixed-topology --set 'project_folder=resul
 
 These properties are judged using computational proxies. See [property objectives and acceptance filters](docs/source/reference.md#property-objectives-and-acceptance-filters) for what each one measures and requires, and [starting conformations](docs/source/reference.md#starting-conformations) for the optional `--hard-target` and `--large-complex` flags.
 
+### pH-selective binding
+
+An optional stage redesigns each ProteinMPNN candidate around a pinned protonated centre, so the
+binder's energy differs between that centre's protonated and deprotonated states. Enable it with
+`ph_redesign` in the settings file; it is off by default and a campaign without it is unchanged.
+
+```json
+{ "ph_redesign": true, "ph_criteria": { "center_types": ["HIS-P"], "placement_region": ["interface"] } }
+```
+
+This stage needs the image built from [containers/Dockerfile.ph](containers/Dockerfile.ph). See
+[pH-switch redesign](docs/ph_redesign.md) for the settings, how to choose the centre chemistry for a
+given pH window, pinning a centre on the target, and what the reported energies do and do not mean.
+
 ### Combining modalities
 
 ![Compatibility of binder design modalities: supported combinations in green, unsupported combinations in red](docs/.assets/modality_compatibility.png)

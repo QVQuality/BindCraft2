@@ -1,8 +1,13 @@
-# BC2 for any machine with an NVIDIA driver, x86-64 or aarch64. The jax cuda13 wheels carry their own
+# BC2 for any machine with an NVIDIA driver, x86-64 or aarch64. The jax CUDA wheels carry their own
 # CUDA and cuDNN, so the base image is plain Ubuntu and one file builds both architectures.
 #
 #   docker buildx build --platform linux/amd64,linux/arm64 -t bindcraft:1.0 -f containers/Dockerfile .
 #   docker run --gpus all -v "$PWD:/work" bindcraft:1.0 design settings.json
+#
+# The default wheels are CUDA 13, which needs a driver serving CUDA 13 (r580 or newer) and a card of
+# compute capability 7.5 or newer. Build with --build-arg ACCELERATOR=cuda12 for an older driver or
+# an older card; a mismatch is not caught until a campaign runs, where jax reports the card as
+# unsupported rather than as a driver that is too old.
 #
 # ProteinMPNN ships inside the package, so the image redesigns sequences as built. The AlphaFold
 # parameters are 5.3 GB and are downloaded into the user's cache on the first campaign instead; build
@@ -21,10 +26,11 @@ ENV PIP_BREAK_SYSTEM_PACKAGES=1 PIP_NO_CACHE_DIR=1 PYTHONUNBUFFERED=1
 # than inside the package, and the runtime finds them relative to it, so the source tree has to stay
 # in place and on the import path -- a plain install would copy only the package and orphan them.
 COPY . /opt/bindcraft
-RUN python3 -m pip install -e "/opt/bindcraft[cuda13]"
+ARG ACCELERATOR=cuda13
+RUN python3 -m pip install -e "/opt/bindcraft[$ACCELERATOR]"
 
 # Two things have to line up for a campaign in here to reach the cards, and jax says neither out
-# loud: it warns once and runs on the CPU, a hundred times slower. The cuda13 wheels keep their
+# loud: it warns once and runs on the CPU, a hundred times slower. The wheels keep their
 # libraries under nvidia/*/lib inside site-packages, where the loader does not look; and the NVIDIA
 # container hook injects the host's driver only into an image that asks for it by these two
 # variables, which a CUDA base image would have set and plain Ubuntu does not.
@@ -43,7 +49,7 @@ RUN if [ "$ALPHAFOLD_PARAMETERS" = bake ]; then \
 WORKDIR /
 RUN python3 -c "import jax, bindcraft.proteinmpnn; print('jax', jax.__version__)" \
  && bindcraft --help > /dev/null \
- && python3 -m bindcraft.selfcheck cuda13 --shipped-only
+ && python3 -m bindcraft.selfcheck "$ACCELERATOR" --shipped-only
 
 WORKDIR /work
 ENTRYPOINT ["bindcraft"]
