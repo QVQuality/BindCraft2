@@ -52,8 +52,9 @@ RUN python3 -c "import bindcraft.campaign, bindcraft.proteinmpnn; import importl
  && python3 -c "import bindcraft.ph_redesign as p; print('ph wrapper imports:', p.PHRedesignSequenceModel.__name__)" \
  && python3 /opt/ph_proxy_check.py \
  && printf '%s' '{"structure":"/opt/protonpotts/examples/pdl1_seed_binder.pdb","binder_chain":"A","seeds":[],"criteria":{"lambdas":[1.0]},"n_jobs":1,"seed":0}' > /tmp/ph_job.json \
- && /opt/protonpotts/venv/bin/python /opt/protonpotts/ph_worker.py /tmp/ph_job.json /tmp/ph_result.json \
- && python3 -c "import json,sys; r=json.load(open('/tmp/ph_result.json')); sys.exit(r.get('error') or 0) if r.get('error') else print('ph smoke test:', len(r['designs']), 'design(s), selective', r['designs'][0]['selective_energy'])" \
+ && { /opt/protonpotts/venv/bin/python /opt/protonpotts/ph_worker.py /tmp/ph_job.json /tmp/ph_result.json \
+      || { python3 -c "import json; r=json.load(open('/tmp/ph_result.json')); print(r.get('error', 'no error recorded')); print(r.get('traceback', ''))"; exit 1; }; } \
+ && python3 -c "import json; r=json.load(open('/tmp/ph_result.json')); print('ph smoke test:', len(r['designs']), 'design(s), selective', r['designs'][0]['selective_energy'])" \
  && rm -f /tmp/ph_job.json /tmp/ph_result.json
 
 WORKDIR /work
