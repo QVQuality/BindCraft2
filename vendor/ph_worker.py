@@ -168,7 +168,8 @@ def run(job):
     from biotite.structure.io.pdb import PDBFile
     from mpnn.inference_engines.potts_mpnn_ph import PHDesignCriteria, PottsMPNNPHEngine
 
-    atom_array = PDBFile.read(job["structure"]).get_structure(model=1)
+    # atomworks requires a charge annotation, and biotite attaches one only on request.
+    atom_array = PDBFile.read(job["structure"]).get_structure(model=1, extra_fields=["charge"])
     engine = PottsMPNNPHEngine(
         checkpoint_path=job.get("checkpoint", CHECKPOINT),
         extended_vocab="v6",
